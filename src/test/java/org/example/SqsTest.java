@@ -1,5 +1,7 @@
 package org.example;
 
+import io.awspring.cloud.sqs.listener.MessageListenerContainer;
+import io.awspring.cloud.sqs.listener.MessageListenerContainerRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +21,11 @@ import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
 
+import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Objects;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
@@ -33,6 +37,9 @@ public class SqsTest {
 
     @Autowired
     private SqsConsumer sqsConsumer;
+
+    @Autowired
+    private MessageListenerContainerRegistry messageListenerContainerRegistry;
 
     @DynamicPropertySource
     static void configureAwsProperties(DynamicPropertyRegistry registry) {
@@ -55,6 +62,15 @@ public class SqsTest {
         String queueName = "test-queue";
         String queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(queueName).build()).queueUrl();
 
+        addMessagesToQueue(sqsClient, queueUrl);
+
+        await().atMost(Duration.ofSeconds(15))
+                .until(() -> sqsConsumer.getReceivedMessages().contains("message 200"));
+    }
+
+    private void addMessagesToQueue(SqsClient sqsClient, String queueUrl) {
+        getQueueListener("testQueueListener").stop();
+
         int batchSize = 10;
         for (int i = 1; i <= 200; i += batchSize) {
             var batch = new ArrayList<SendMessageBatchRequestEntry>();
@@ -71,8 +87,10 @@ public class SqsTest {
                     .build());
         }
         System.out.println("All messages sent to the queue.");
+        getQueueListener("testQueueListener").start();
+    }
 
-        await().atMost(Duration.ofSeconds(15))
-                .until(() -> sqsConsumer.getReceivedMessages().contains("message 200"));
+    private MessageListenerContainer<?> getQueueListener(String id) {
+        return requireNonNull(messageListenerContainerRegistry.getContainerById(id));
     }
 }

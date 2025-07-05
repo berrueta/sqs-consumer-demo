@@ -11,6 +11,7 @@ public class SqsConsumer {
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
     @SqsListener(
+            id = "testQueueListener",
             value = "test-queue",
             maxConcurrentMessages = "20",
             maxMessagesPerPoll = "10",
