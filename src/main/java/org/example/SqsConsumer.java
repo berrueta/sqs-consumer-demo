@@ -25,8 +25,8 @@ public class SqsConsumer {
     )
     public void receiveMessages(List<String> messages) throws InterruptedException {
         logger.info("Received batch: {}", messages);
-        receivedMessages.addAll(messages);
         Thread.sleep(1000);
+        receivedMessages.addAll(messages);
         logger.info("Consumed batch: {}", messages);
     }
 
