@@ -50,6 +50,7 @@ public class SqsTest {
         registry.add("spring.cloud.aws.region.static", localstack::getRegion);
         registry.add("spring.cloud.aws.credentials.access-key", localstack::getAccessKey);
         registry.add("spring.cloud.aws.credentials.secret-key", localstack::getSecretKey);
+        registry.add("cloud.aws.sqs.autoStart", () -> "false"); // Disable auto-start of SQS listener
     }
 
     @Test
