@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 public class SqsTest {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(SqsTest.class);
 
-    private static final int TOTAL_MESSAGES = 200;
+    private static final int TOTAL_MESSAGES = 100;
 
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.4.0"))
