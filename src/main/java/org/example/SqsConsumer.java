@@ -19,9 +19,9 @@ public class SqsConsumer {
     @SqsListener(
             id = TEST_QUEUE_LISTENER,
             value = TEST_QUEUE_NAME,
-            maxConcurrentMessages = "20",
-            maxMessagesPerPoll = "10",
-            pollTimeoutSeconds = "2"
+            maxConcurrentMessages = "10", // default is 10
+            maxMessagesPerPoll = "10", // default is 10, should be less or equal than the above
+            pollTimeoutSeconds = "2" // default is 10 seconds
     )
     public void receiveMessages(List<String> messages) throws InterruptedException {
         logger.info("Received batch: {}", messages);
