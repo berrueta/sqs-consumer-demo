@@ -4,11 +4,13 @@ import io.awspring.cloud.sqs.listener.MessageListenerContainer;
 import io.awspring.cloud.sqs.listener.MessageListenerContainerRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.util.StopWatch;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -33,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 @Testcontainers
 @ExtendWith(SpringExtension.class)
 public class SqsTest {
+    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(SqsTest.class);
+
     private static final int TOTAL_MESSAGES = 200;
 
     @Container
@@ -73,8 +77,6 @@ public class SqsTest {
     }
 
     private void addMessagesToQueue(SqsClient sqsClient, String queueUrl) {
-        getQueueListener().stop();
-
         int batchSize = 10;
         for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
             var batch = new ArrayList<SendMessageBatchRequestEntry>();
@@ -90,12 +92,21 @@ public class SqsTest {
                     .entries(batch)
                     .build());
         }
-        System.out.println("All messages sent to the queue.");
+
+        logger.info("All {} messages sent to the queue in batches of {}", TOTAL_MESSAGES, batchSize);
+
         getQueueListener().start();
 
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         await()
                 .atMost(5, TimeUnit.MINUTES)
                 .until(() -> sqsConsumer.getReceivedMessages().size() == TOTAL_MESSAGES);
+        stopWatch.stop();
+
+        logger.info("All messages received in {} seconds", stopWatch.getTotalTimeSeconds());
+
+        getQueueListener().stop();
     }
 
     private MessageListenerContainer<?> getQueueListener() {

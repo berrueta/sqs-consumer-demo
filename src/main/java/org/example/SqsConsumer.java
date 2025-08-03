@@ -1,6 +1,8 @@
 package org.example;
 
 import io.awspring.cloud.sqs.annotation.SqsListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -8,6 +10,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class SqsConsumer {
+    private static final Logger logger = LoggerFactory.getLogger(SqsConsumer.class);
+
     public static final String TEST_QUEUE_NAME = "test-queue";
     public static final String TEST_QUEUE_LISTENER = "testQueueListener";
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
@@ -20,10 +24,10 @@ public class SqsConsumer {
             pollTimeoutSeconds = "2"
     )
     public void receiveMessages(List<String> messages) throws InterruptedException {
-        System.out.println(Thread.currentThread().getName() + " Received batch: " + messages);
+        logger.info("Received batch: {}", messages);
         receivedMessages.addAll(messages);
-        Thread.sleep(200);
-        System.out.println(Thread.currentThread().getName() + " Consumed batch: " + messages);
+        Thread.sleep(1000);
+        logger.info("Consumed batch: {}", messages);
     }
 
     public List<String> getReceivedMessages() {
