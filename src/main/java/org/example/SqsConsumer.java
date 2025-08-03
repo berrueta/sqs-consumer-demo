@@ -26,9 +26,11 @@ public class SqsConsumer {
             maxMessagesPerPoll = "10", // default is 10, should be less or equal than the above
             pollTimeoutSeconds = "10" // default is 10 seconds
     )
+//    public void receiveMessages(String message) throws InterruptedException {
+//        var messages = List.of(message);
     public void receiveMessages(List<String> messages) throws InterruptedException {
         logger.info("Received batch of size {}: {}", messages.size(), messages);
-        long timeToProcessBatchMs = messages.size() * DELAY_PER_MESSAGE_MS;
+        var timeToProcessBatchMs = messages.size() * DELAY_PER_MESSAGE_MS;
         Thread.sleep(timeToProcessBatchMs);
         receivedMessages.addAll(messages);
         logger.info("Consumed batch after delay of {}: {}", timeToProcessBatchMs, messages);
