@@ -8,11 +8,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class SqsConsumer {
+    public static final String TEST_QUEUE_NAME = "test-queue";
+    public static final String TEST_QUEUE_LISTENER = "testQueueListener";
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
     @SqsListener(
-            id = "testQueueListener",
-            value = "test-queue",
+            id = TEST_QUEUE_LISTENER,
+            value = TEST_QUEUE_NAME,
             maxConcurrentMessages = "20",
             maxMessagesPerPoll = "10",
             pollTimeoutSeconds = "2"

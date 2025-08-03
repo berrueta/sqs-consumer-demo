@@ -23,9 +23,10 @@ import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
 
 import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
+import static org.example.SqsConsumer.TEST_QUEUE_LISTENER;
+
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -54,7 +55,7 @@ public class SqsTest {
     }
 
     @Test
-    void testSqsSendAndReceive() throws Exception {
+    void testSqsSendAndReceive() {
         SqsClient sqsClient = SqsClient.builder()
                 .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.SQS))
                 .region(Region.of(localstack.getRegion()))
@@ -63,8 +64,7 @@ public class SqsTest {
                 ))
                 .build();
 
-        String queueName = "test-queue";
-        String queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(queueName).build()).queueUrl();
+        String queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).queueUrl();
 
         addMessagesToQueue(sqsClient, queueUrl);
 
@@ -73,7 +73,7 @@ public class SqsTest {
     }
 
     private void addMessagesToQueue(SqsClient sqsClient, String queueUrl) {
-        getQueueListener("testQueueListener").stop();
+        getQueueListener().stop();
 
         int batchSize = 10;
         for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
@@ -91,14 +91,14 @@ public class SqsTest {
                     .build());
         }
         System.out.println("All messages sent to the queue.");
-        getQueueListener("testQueueListener").start();
+        getQueueListener().start();
 
         await()
                 .atMost(5, TimeUnit.MINUTES)
                 .until(() -> sqsConsumer.getReceivedMessages().size() == TOTAL_MESSAGES);
     }
 
-    private MessageListenerContainer<?> getQueueListener(String id) {
-        return requireNonNull(messageListenerContainerRegistry.getContainerById(id));
+    private MessageListenerContainer<?> getQueueListener() {
+        return requireNonNull(messageListenerContainerRegistry.getContainerById(TEST_QUEUE_LISTENER));
     }
 }
