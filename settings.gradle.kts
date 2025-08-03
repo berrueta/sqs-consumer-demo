@@ -1,1 +1,1 @@
-rootProject.name = "sql-consumer"
+rootProject.name = "sqs-consumer"
