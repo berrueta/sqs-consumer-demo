@@ -26,11 +26,14 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
 @ExtendWith(SpringExtension.class)
 public class SqsTest {
+    private static final int TOTAL_MESSAGES = 200;
+
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.4.0"))
             .withServices(LocalStackContainer.Service.SQS);
@@ -72,9 +75,9 @@ public class SqsTest {
         getQueueListener("testQueueListener").stop();
 
         int batchSize = 10;
-        for (int i = 1; i <= 200; i += batchSize) {
+        for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
             var batch = new ArrayList<SendMessageBatchRequestEntry>();
-            for (int j = 0; j < batchSize && (i + j) <= 200; j++) {
+            for (int j = 0; j < batchSize && (i + j) <= TOTAL_MESSAGES; j++) {
                 int msgNum = i + j;
                 batch.add(SendMessageBatchRequestEntry.builder()
                         .id("msg-" + msgNum)
@@ -88,6 +91,10 @@ public class SqsTest {
         }
         System.out.println("All messages sent to the queue.");
         getQueueListener("testQueueListener").start();
+
+        await()
+                .atMost(5, TimeUnit.MINUTES)
+                .until(() -> sqsConsumer.getReceivedMessages().size() == TOTAL_MESSAGES);
     }
 
     private MessageListenerContainer<?> getQueueListener(String id) {
