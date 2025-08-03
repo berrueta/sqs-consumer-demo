@@ -18,18 +18,20 @@ public class SqsConsumer {
 
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
+    // see https://docs.awspring.io/spring-cloud-aws/docs/3.3.0/reference/html/index.html#sqs-integration for details about the parameters
     @SqsListener(
             id = TEST_QUEUE_LISTENER,
             value = TEST_QUEUE_NAME,
             maxConcurrentMessages = "10", // default is 10
             maxMessagesPerPoll = "10", // default is 10, should be less or equal than the above
-            pollTimeoutSeconds = "2" // default is 10 seconds
+            pollTimeoutSeconds = "10" // default is 10 seconds
     )
     public void receiveMessages(List<String> messages) throws InterruptedException {
         logger.info("Received batch of size {}: {}", messages.size(), messages);
-        Thread.sleep(messages.size() * DELAY_PER_MESSAGE_MS);
+        long timeToProcessBatchMs = messages.size() * DELAY_PER_MESSAGE_MS;
+        Thread.sleep(timeToProcessBatchMs);
         receivedMessages.addAll(messages);
-        logger.info("Consumed batch: {}", messages);
+        logger.info("Consumed batch after delay of {}: {}", timeToProcessBatchMs, messages);
     }
 
     public List<String> getReceivedMessages() {

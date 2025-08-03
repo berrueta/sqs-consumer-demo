@@ -2,6 +2,8 @@ package org.example;
 
 import io.awspring.cloud.sqs.listener.MessageListenerContainer;
 import io.awspring.cloud.sqs.listener.MessageListenerContainerRegistry;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -49,6 +51,10 @@ public class SqsTest {
     @Autowired
     private MessageListenerContainerRegistry messageListenerContainerRegistry;
 
+    private SqsClient sqsClient;
+    private String queueUrl;
+    private final StopWatch stopWatch = new StopWatch();
+
     @DynamicPropertySource
     static void configureAwsProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.cloud.aws.sqs.endpoint", () -> localstack.getEndpointOverride(LocalStackContainer.Service.SQS).toString());
@@ -58,9 +64,9 @@ public class SqsTest {
         registry.add("cloud.aws.sqs.autoStart", () -> "false"); // Disable auto-start of SQS listener
     }
 
-    @Test
-    void testSqsSendAndReceive() {
-        SqsClient sqsClient = SqsClient.builder()
+    @BeforeEach
+    void createSqsClientAndQueue() {
+        sqsClient = SqsClient.builder()
                 .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.SQS))
                 .region(Region.of(localstack.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
@@ -68,12 +74,24 @@ public class SqsTest {
                 ))
                 .build();
 
-        String queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).queueUrl();
+        queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).queueUrl();
+    }
 
+    @Test
+    void testSqsSendAndReceive() {
         addMessagesToQueue(sqsClient, queueUrl);
 
-        await().atMost(Duration.ofSeconds(15))
-                .until(() -> sqsConsumer.getReceivedMessages().contains("message 200"));
+        stopWatch.start();
+        getQueueListener().start();
+
+        await()
+                .atMost(5, TimeUnit.MINUTES)
+                .until(() -> sqsConsumer.getReceivedMessages().size() == TOTAL_MESSAGES);
+        stopWatch.stop();
+
+        logger.info("All messages received in {} seconds", stopWatch.getTotalTimeSeconds());
+
+        getQueueListener().stop();
     }
 
     private void addMessagesToQueue(SqsClient sqsClient, String queueUrl) {
@@ -94,19 +112,6 @@ public class SqsTest {
         }
 
         logger.info("All {} messages sent to the queue in batches of {}", TOTAL_MESSAGES, batchSize);
-
-        getQueueListener().start();
-
-        StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-        await()
-                .atMost(5, TimeUnit.MINUTES)
-                .until(() -> sqsConsumer.getReceivedMessages().size() == TOTAL_MESSAGES);
-        stopWatch.stop();
-
-        logger.info("All messages received in {} seconds", stopWatch.getTotalTimeSeconds());
-
-        getQueueListener().stop();
     }
 
     private MessageListenerContainer<?> getQueueListener() {
