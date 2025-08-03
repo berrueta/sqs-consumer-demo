@@ -14,6 +14,8 @@ public class SqsConsumer {
 
     public static final String TEST_QUEUE_NAME = "test-queue";
     public static final String TEST_QUEUE_LISTENER = "testQueueListener";
+    private static final long DELAY_PER_MESSAGE_MS = 100;
+
     private final List<String> receivedMessages = new CopyOnWriteArrayList<>();
 
     @SqsListener(
@@ -24,8 +26,8 @@ public class SqsConsumer {
             pollTimeoutSeconds = "2" // default is 10 seconds
     )
     public void receiveMessages(List<String> messages) throws InterruptedException {
-        logger.info("Received batch: {}", messages);
-        Thread.sleep(1000);
+        logger.info("Received batch of size {}: {}", messages.size(), messages);
+        Thread.sleep(messages.size() * DELAY_PER_MESSAGE_MS);
         receivedMessages.addAll(messages);
         logger.info("Consumed batch: {}", messages);
     }
