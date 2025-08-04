@@ -30,10 +30,11 @@ public class SqsConsumer {
 //        var messages = List.of(message);
     public void receiveMessages(List<String> messages) throws InterruptedException {
         logger.info("Received batch of size {}: {}", messages.size(), messages);
-        var timeToProcessBatchMs = messages.size() * DELAY_PER_MESSAGE_MS;
-        Thread.sleep(timeToProcessBatchMs);
+        for (String individualMessage : messages) {
+            Thread.sleep(DELAY_PER_MESSAGE_MS);
+        }
         receivedMessages.addAll(messages);
-        logger.info("Consumed batch after delay of {}: {}", timeToProcessBatchMs, messages);
+        logger.info("Consumed batch: {}", messages);
     }
 
     public List<String> getReceivedMessages() {
