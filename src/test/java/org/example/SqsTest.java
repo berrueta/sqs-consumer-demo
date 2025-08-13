@@ -2,16 +2,13 @@ package org.example;
 
 import io.awspring.cloud.sqs.listener.MessageListenerContainer;
 import io.awspring.cloud.sqs.listener.MessageListenerContainerRegistry;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.util.StopWatch;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -29,18 +26,17 @@ import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
 import static org.example.SqsConsumer.TEST_QUEUE_LISTENER;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
-@ExtendWith(SpringExtension.class)
 public class SqsTest {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(SqsTest.class);
 
     private static final int TOTAL_MESSAGES = 100;
 
+    @SuppressWarnings("resource")
     @Container
     public static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.4.0"))
             .withServices(LocalStackContainer.Service.SQS);
