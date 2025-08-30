@@ -14,10 +14,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
@@ -27,6 +24,7 @@ import static org.awaitility.Awaitility.await;
 import static org.example.SqsConsumer.TEST_QUEUE_LISTENER;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -47,7 +45,9 @@ public class SqsTest {
     @Autowired
     private MessageListenerContainerRegistry messageListenerContainerRegistry;
 
-    private SqsClient sqsClient;
+    @Autowired
+    private SqsAsyncClient sqsClient;
+
     private String queueUrl;
     private final StopWatch stopWatch = new StopWatch();
 
@@ -61,16 +61,8 @@ public class SqsTest {
     }
 
     @BeforeEach
-    void createSqsClientAndQueue() {
-        sqsClient = SqsClient.builder()
-                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.SQS))
-                .region(Region.of(localstack.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())
-                ))
-                .build();
-
-        queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).queueUrl();
+    void createQueue() throws ExecutionException, InterruptedException {
+        queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).get().queueUrl();
     }
 
     @Test
@@ -90,7 +82,7 @@ public class SqsTest {
         getQueueListener().stop();
     }
 
-    private void addMessagesToQueue(SqsClient sqsClient, String queueUrl) {
+    private void addMessagesToQueue(SqsAsyncClient sqsClient, String queueUrl) {
         int batchSize = 10;
         for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
             var batch = new ArrayList<SendMessageBatchRequestEntry>();
