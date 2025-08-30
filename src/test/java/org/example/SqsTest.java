@@ -19,15 +19,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
-import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
 
 import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
 import static org.example.SqsConsumer.TEST_QUEUE_LISTENER;
 
-import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Testcontainers
@@ -89,11 +88,9 @@ public class SqsTest {
     private void addMessagesToQueue() {
         int batchSize = 10;
         for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
-            var batch = new ArrayList<Message<String>>();
-            for (int j = 0; j < batchSize && (i + j) <= TOTAL_MESSAGES; j++) {
-                int msgNum = i + j;
-                batch.add(new GenericMessage<>("message " + msgNum));
-            }
+            var batch = IntStream.range(i, i + batchSize)
+                    .<Message<String>>mapToObj(j -> new GenericMessage<>("message " + (j + 1)))
+                    .toList();
             sqsTemplate.sendMany(SqsConsumer.TEST_QUEUE_NAME, batch);
         }
 
