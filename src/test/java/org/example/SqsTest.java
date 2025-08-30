@@ -2,11 +2,14 @@ package org.example;
 
 import io.awspring.cloud.sqs.listener.MessageListenerContainer;
 import io.awspring.cloud.sqs.listener.MessageListenerContainerRegistry;
+import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.StopWatch;
@@ -17,7 +20,6 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequest;
-import software.amazon.awssdk.services.sqs.model.SendMessageBatchRequestEntry;
 
 import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
@@ -48,7 +50,9 @@ public class SqsTest {
     @Autowired
     private SqsAsyncClient sqsClient;
 
-    private String queueUrl;
+    @Autowired
+    private SqsTemplate sqsTemplate;
+
     private final StopWatch stopWatch = new StopWatch();
 
     @DynamicPropertySource
@@ -62,12 +66,12 @@ public class SqsTest {
 
     @BeforeEach
     void createQueue() throws ExecutionException, InterruptedException {
-        queueUrl = sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).get().queueUrl();
+        sqsClient.createQueue(CreateQueueRequest.builder().queueName(SqsConsumer.TEST_QUEUE_NAME).build()).get();
     }
 
     @Test
     void testSqsSendAndReceive() {
-        addMessagesToQueue(sqsClient, queueUrl);
+        addMessagesToQueue();
 
         stopWatch.start();
         getQueueListener().start();
@@ -82,21 +86,15 @@ public class SqsTest {
         getQueueListener().stop();
     }
 
-    private void addMessagesToQueue(SqsAsyncClient sqsClient, String queueUrl) {
+    private void addMessagesToQueue() {
         int batchSize = 10;
         for (int i = 1; i <= TOTAL_MESSAGES; i += batchSize) {
-            var batch = new ArrayList<SendMessageBatchRequestEntry>();
+            var batch = new ArrayList<Message<String>>();
             for (int j = 0; j < batchSize && (i + j) <= TOTAL_MESSAGES; j++) {
                 int msgNum = i + j;
-                batch.add(SendMessageBatchRequestEntry.builder()
-                        .id("msg-" + msgNum)
-                        .messageBody("message " + msgNum)
-                        .build());
+                batch.add(new GenericMessage<>("message " + msgNum));
             }
-            sqsClient.sendMessageBatch(SendMessageBatchRequest.builder()
-                    .queueUrl(queueUrl)
-                    .entries(batch)
-                    .build());
+            sqsTemplate.sendMany(SqsConsumer.TEST_QUEUE_NAME, batch);
         }
 
         logger.info("All {} messages sent to the queue in batches of {}", TOTAL_MESSAGES, batchSize);
